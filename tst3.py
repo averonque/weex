@@ -30,4 +30,4 @@ headers = {
 }   
 
 resp = requests.post(url, headers=headers, data=body_str)
-print( resp.status_code)
+print( resp.text)
