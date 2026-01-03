@@ -726,25 +726,26 @@ def analyze():
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
-        data = resp.json()
+        start_marker = '"content":"'
+        start_idx = resp.text.find(start_marker)
+        if start_idx == -1:
+            raise ValueError("content field not found")
 
-        # --- Extract nested JSON string ---
-        try:
-            content_str = data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError):
-            raise HTTPException(status_code=502, detail="Unexpected xAI response format")
+        # Move past the marker
+        start_idx += len(start_marker)
 
-        # Clean escaped quotes
-        if '\\"' in content_str:
-            content_str = content_str.replace('\\"', '"')
+        # Find the closing quote for content (before ,"refusal")
+        end_idx = resp.text.find('"refusal"', start_idx)
+        if end_idx == -1:
+            raise ValueError("end of content not found")
 
-        try:
-            decision = json.loads(content_str)
-        except Exception:
-            decision = {"raw": content_str}
+        # Step back to the last quote before "refusal"
+        end_idx = resp.text.rfind('"', start_idx, end_idx)
 
-        return {"context": payload_context, "decision": decision, "model": XAI_MODEL}
-
+        content = resp.text[start_idx:end_idx]
+    
+        content =  content.replace('\\"', '"')
+        return {"data":json.loads(content)}
     except HTTPException:
         raise
     except Exception as e:
