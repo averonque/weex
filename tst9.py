@@ -33,7 +33,7 @@ def send_request_get(api_key, secret_key, access_passphrase, method, request_pat
 
 def fills():
     request_path = "/capi/v2/order/fills"
-    query_string = "?symbol=cmt_btcusdt&orderId=YOUR_ORDER_ID"
+    query_string = "?symbol=cmt_btcusdt&orderId=702171352861246368"
     response = send_request_get(api_key, secret_key, access_passphrase, "GET", request_path, query_string)
     print(response.status_code)
     print(response.text)
