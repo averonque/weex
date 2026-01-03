@@ -5,12 +5,9 @@ import hashlib
 import base64
 import requests
 
-api_key = ""
-secret_key = ""
-access_passphrase = ""
-API_KEY = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
-API_SECRET = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
-PASSPHRASE = "weex652694794"
+api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
+secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
+access_passphrase = "weex652694794"
 
 
 def generate_signature_get(secret_key, timestamp, method, request_path, query_string):
