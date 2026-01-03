@@ -19,12 +19,13 @@ def send_request_get(api_key, secret_key, access_passphrase, method, request_pat
   timestamp = str(int(time.time() * 1000))
   signature = generate_signature_get(secret_key, timestamp, method, request_path, query_string)
   headers = {
-    "ACCESS-KEY": API_KEY,
-    "ACCESS-SIGN": signature,
-    "ACCESS-PASSPHRASE": PASSPHRASE,
-    "ACCESS-TIMESTAMP": timestamp,
-    "Content-Type": "application/json",
-}   
+        "ACCESS-KEY": api_key,
+        "ACCESS-SIGN": signature,
+        "ACCESS-TIMESTAMP": timestamp,
+        "ACCESS-PASSPHRASE": access_passphrase,
+        "Content-Type": "application/json",
+        "locale": "en-US"
+  }
 
 
   url = "https://api-contract.weex.com/"  # Please replace with the actual API address
