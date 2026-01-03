@@ -399,8 +399,7 @@ def weex_get_depth(symbol: str, limit: int = 20) -> Dict[str, Any]:
 
 
     # Run the command and capture output
-    result = subprocess.run(  ["cmd", "/c", cmd] , capture_output=True, text=True)
-
+    result = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
     # Print status and output
    
     tmp = result.stdout
