@@ -40,7 +40,7 @@ def placeOrder():
         "type": "1",
         "order_type": "0",
         "match_price": "0",
-        "price": "100000.0"}
+        "price": "1000.0"}
     query_string = ""
     response = send_request_post(api_key, secret_key, access_passphrase, "POST", request_path, query_string, body)
     print(response.status_code)
