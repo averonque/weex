@@ -788,7 +788,17 @@ def analyze():
             },
             "htf_candidates": trades[-5:] if trades else [],
         }
-        
+        daily = weex_get_candles(SYMBOL, DAILY_PERIOD, CANDLE_LIMIT_DAILY)
+        intra = weex_get_candles(SYMBOL, INTRA_PERIOD, CANDLE_LIMIT_INTRA)
+
+        htf_zones = detect_htf_stops(daily)
+        ltf_zones = detect_ltf_stops(intra)
+        zones = rank_liquidity_zones(htf_zones, ltf_zones)
+
+        last_close = float(intra["close"].iloc[-1]) if len(intra) else None
+        opens = time_based_opens(intra.index[-1]) if len(intra) else {}
+        bias = bias_from_opens(last_close, opens) if last_close else None
+
         payload_context["liquidity"] = {
         "bias": bias,
         "zones": [z.__dict__ for z in zones],
