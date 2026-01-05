@@ -32,6 +32,7 @@ def send_request_get(api_key, secret_key, access_passphrase, method, request_pat
   return response
 
 def weex_get_account_balances():
+    global  url
     path = "/capi/v2/account/balances"
     url = f"{url}{path}"
     
