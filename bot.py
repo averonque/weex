@@ -10,10 +10,10 @@ BOT_SHARED_SECRET = os.getenv("BOT_SHARED_SECRET")
 ALLOWED_CHAT_ID = int(os.getenv("ALLOWED_CHAT_ID", "0"))  # optional: restrict usage
 
 def api_get(path: str):
-    return requests.get(f"{FASTAPI_BASE}{path}", headers={"X-BOT-SECRET": BOT_SHARED_SECRET}, timeout=20)
+    return requests.get(f"{FASTAPI_BASE}{path}", headers={}, timeout=20)
 
 def api_post(path: str, json_body: dict):
-    return requests.post(f"{FASTAPI_BASE}{path}", json=json_body, headers={"X-BOT-SECRET": BOT_SHARED_SECRET}, timeout=20)
+    return requests.post(f"{FASTAPI_BASE}{path}", json=json_body, headers={}, timeout=20)
 
 def authorized(update: Update) -> bool:
     return (ALLOWED_CHAT_ID == 0) or (update.effective_chat and update.effective_chat.id == ALLOWED_CHAT_ID)
