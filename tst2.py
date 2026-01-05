@@ -781,7 +781,7 @@ def get_usdt_balance() -> float:
         "ACCESS-TIMESTAMP": timestamp,
         "Content-Type": "application/json",
     }
-    url = f"{SPOT_BASE}{path}"
+    url = f"{CONTRACT_BASE}{path}"
     resp = requests.get(url, headers=headers, timeout=10)
     
     resp.raise_for_status()
