@@ -787,10 +787,10 @@ def get_usdt_balance() -> float:
     resp.raise_for_status()
     data = resp.json()
 
-    # Example: {"data":[{"coinName":"USDT","available":"999.89894472",...}]}
-    for item in data.get("data", []):
-        if item["coinName"] == "USDT":
+    for item in data:  # because data is already a list
+        if item.get("coinName") == "USDT":
             return float(item["available"])
+
     return 0.0
 
 
