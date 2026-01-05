@@ -775,7 +775,7 @@ def get_usdt_balance() -> float:
     signature = generate_signature_get(secret_key, timestamp,"GET", path, "")
  
     headers = {
-        "ACCESS-KEY": XAI_API_KEY,
+        "ACCESS-KEY": api_key,
         "ACCESS-SIGN": signature,
         "ACCESS-PASSPHRASE": access_passphrase,
         "ACCESS-TIMESTAMP": timestamp,
