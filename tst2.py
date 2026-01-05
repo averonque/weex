@@ -746,6 +746,48 @@ def features():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"features error: {e}")
+
+
+api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
+secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
+access_passphrase = "weex652694794"
+
+def generate_signature(secret_key, timestamp, method, request_path, query_string, body):
+    message = timestamp + method.upper() + request_path + query_string + str(body)
+    signature = hmac.new(secret_key.encode(), message.encode(), hashlib.sha256).digest()
+    return base64.b64encode(signature).decode()
+
+def get_usdt_balance() -> float:
+    """
+    Fetch account assets and return available USDT balance.
+    """
+    path = "/api/v2/account/assets"
+    ts = str(int(time.time() * 1000))
+
+    timestamp = str(int(time.time() * 1000))
+
+    signature = generate_signature(secret_key, timestamp, method, path, "")
+ 
+    headers = {
+        "ACCESS-KEY": API_KEY,
+        "ACCESS-SIGN": signature,
+        "ACCESS-PASSPHRASE": PASSPHRASE,
+        "ACCESS-TIMESTAMP": ts,
+        "Content-Type": "application/json",
+    }
+    url = f"{SPOT_BASE}{path}"
+    resp = requests.get(url, headers=headers, timeout=10)
+    
+    resp.raise_for_status()
+    data = resp.json()
+
+    # Example: {"data":[{"coinName":"USDT","available":"999.89894472",...}]}
+    for item in data.get("data", []):
+        if item["coinName"] == "USDT":
+            return float(item["available"])
+    return 0.0
+
+
 @app.get("/analyze")
 def analyze():
     if not XAI_API_KEY:
@@ -799,18 +841,20 @@ def analyze():
         opens = time_based_opens(intra.index[-1]) if len(intra) else {}
         bias = bias_from_opens(last_close, opens) if last_close else None
 
+        
+
+
         payload_context["liquidity"] = {
         "bias": bias,
         "zones": [z.__dict__ for z in zones],
         "opens": opens,
     }
 
-        user_prompt = (
-            "You are a trading signal analyst. Return strict JSON only.\n"
-            "Schema: {decision: 'buy'|'sell'|'hold', confidence: 0..1, rationale: string}.\n"
-            "Consider: macro_block as a guard (prefer 'hold' if true), percent40 location, and HTF candidates.\n\n"
-            f"Context:\n{json.dumps(payload_context, ensure_ascii=False)}"
-        )
+         payload_context["account"] = 
+        { "usdt_balance": get_usdt_balance()
+    }
+   
+        user_prompt = ( "You are a trading signal analyst. Return strict JSON only.\n" "Schema: {decision: 'buy'|'sell'|'hold', confidence: 0..1, rationale: string, amount: float}.\n" "Rules:\n" "- decision must be 'buy', 'sell', or 'hold'.\n" "- amount is the USDT notional to trade, based on account.usdt_balance and risk logic.\n" "- If macro_block is true, prefer 'hold'.\n" "- Only trade during Hunt session (NY AM window).\n" "- Align with HTF bias: below True Daily Open = long only; above True Daily Open = short only.\n" "- Use liquidity zones: BigStops > Stops, HTF > LTF.\n" "- Confidence is a float between 0 and 1.\n" "- rationale must explain why the decision was made (HTF/LTF sweep, bias, liquidity, session).\n\n" "Context:\n" f"{json.dumps(payload_context, ensure_ascii=False)}" )
 
         headers = {
             "Content-Type": "application/json",
