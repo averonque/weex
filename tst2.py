@@ -767,7 +767,7 @@ def get_usdt_balance() -> float:
     """
     Fetch account assets and return available USDT balance.
     """
-    path = "/api/v2/account/assets"
+    path = "/capi/v2/account/assets"
     ts = str(int(time.time() * 1000))
 
     timestamp = str(int(time.time() * 1000))
