@@ -771,7 +771,7 @@ def get_usdt_balance() -> float:
 
     timestamp = str(int(time.time() * 1000))
 
-    signature = generate_signature(secret_key, timestamp, method, path, "")
+    signature = generate_signature(secret_key, timestamp,"GET", path, "")
  
     headers = {
         "ACCESS-KEY": API_KEY,
