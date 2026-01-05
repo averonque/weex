@@ -8,6 +8,7 @@ api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
 secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
 access_passphrase = "weex652694794"
 
+url = "https://api-contract.weex.com/"
 
 def generate_signature_get(secret_key, timestamp, method, request_path, query_string):
   message = timestamp + method.upper() + request_path + query_string
@@ -26,7 +27,7 @@ def send_request_get(api_key, secret_key, access_passphrase, method, request_pat
         "locale": "en-US"
   }
 
-  url = "https://api-contract.weex.com/"  # Please replace with the actual API address
+    # Please replace with the actual API address
   if method == "GET":
     response = requests.get(url + request_path+query_string, headers=headers)
   return response
