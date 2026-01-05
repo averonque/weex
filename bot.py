@@ -22,8 +22,8 @@ async def send_text(update: Update, text: str):
     await update.message.reply_text(text[:4000])  # keep within Telegram limits
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update):
-        return await send_text(update, "Access denied.")
+    #if not authorized(update):
+       # return await send_text(update, "Access denied.")
     await send_text(update, "Bot ready. Use /status, /analyze, /risk, /max, /auto, /hunt, /trade, /kill")
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
