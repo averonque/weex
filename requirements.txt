@@ -3,4 +3,5 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.0
 requests==2.32.3
 pandas
-python-telegram-bot requests
+python-telegram-bot 
+requests
