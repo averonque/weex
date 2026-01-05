@@ -33,7 +33,7 @@ def send_request_get(api_key, secret_key, access_passphrase, method, request_pat
 
 def weex_get_account_balances():
     path = "/capi/v2/account/balances"
-    url = f"{SPOT_BASE}{path}"
+    url = f"{url}{path}"
     
     resp = requests.get(url, headers=headers, timeout=20)
     data = resp.json()
