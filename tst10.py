@@ -41,6 +41,7 @@ def weex_get_account_balances():
     balances = {}
     for item in data.get("data", []):
         balances[item["currency"]] = float(item["available"])
+    print(balances)
     return balances
 
 if __name__ == '__main__':
