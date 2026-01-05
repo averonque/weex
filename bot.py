@@ -27,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, "Bot ready. Use /status, /analyze, /risk, /max, /auto, /hunt, /trade, /kill")
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     try:
         r = api_get("/status")
         await send_text(update, r.text if r.ok else f"Status error: {r.text}")
@@ -35,7 +35,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, f"Status exception: {e}")
 
 async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    ##if not authorized(update): return await send_text(update, "Access denied.")
     try:
         r = api_get("/analyze")
         await send_text(update, r.text if r.ok else f"Analyze error: {r.text}")
@@ -43,7 +43,7 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, f"Analyze exception: {e}")
 
 async def risk(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     if len(context.args) != 1:
         return await send_text(update, "Usage: /risk 0.5 (percent of equity)")
     try:
@@ -54,7 +54,7 @@ async def risk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, f"Risk exception: {e}")
 
 async def maxsize(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     if len(context.args) != 1:
         return await send_text(update, "Usage: /max 100 (USDT)")
     try:
@@ -65,7 +65,7 @@ async def maxsize(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, f"Max exception: {e}")
 
 async def auto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     if len(context.args) != 1 or context.args[0] not in ("on", "off"):
         return await send_text(update, "Usage: /auto on|off")
     val = context.args[0] == "on"
@@ -73,7 +73,7 @@ async def auto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, r.text if r.ok else f"Auto error: {r.text}")
 
 async def hunt(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     if len(context.args) != 1 or context.args[0] not in ("on", "off"):
         return await send_text(update, "Usage: /hunt on|off")
     val = context.args[0] == "on"
@@ -81,7 +81,7 @@ async def hunt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, r.text if r.ok else f"Hunt error: {r.text}")
 
 async def trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     # Usage: /trade buy 50  OR  /trade sell 0.002 btc (quantity mode optional)
     if len(context.args) < 2:
         return await send_text(update, "Usage: /trade buy 50 (USDT notional) or /trade sell 0.002 qty")
@@ -100,7 +100,7 @@ async def trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, f"Trade exception: {e}")
 
 async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not authorized(update): return await send_text(update, "Access denied.")
+    #if not authorized(update): return await send_text(update, "Access denied.")
     try:
         r = api_post("/trade/kill", {})
         await send_text(update, r.text if r.ok else f"Kill error: {r.text}")
