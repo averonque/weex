@@ -15,6 +15,11 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
 import math
 from datetime import time as dtime
+import time
+import hmac
+import hashlib
+import base64
+
 
 # ------------------ Config ------------------
 SPOT_BASE = "https://api-spot.weex.com"
