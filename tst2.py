@@ -776,8 +776,8 @@ def get_usdt_balance() -> float:
     headers = {
         "ACCESS-KEY": XAI_API_KEY,
         "ACCESS-SIGN": signature,
-        "ACCESS-PASSPHRASE": PASSPHRASE,
-        "ACCESS-TIMESTAMP": ts,
+        "ACCESS-PASSPHRASE": access_passphrase,
+        "ACCESS-TIMESTAMP": timestamp,
         "Content-Type": "application/json",
     }
     url = f"{SPOT_BASE}{path}"
