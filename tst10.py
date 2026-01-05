@@ -10,7 +10,22 @@ access_passphrase = "weex652694794"
 
 url = "https://api-contract.weex.com/"
 
-headers = {
+
+
+def generate_signature_get(secret_key, timestamp, method, request_path, query_string):
+  message = timestamp + method.upper() + request_path + query_string
+  signature = hmac.new(secret_key.encode(), message.encode(), hashlib.sha256).digest()
+  return base64.b64encode(signature).decode()
+
+
+def weex_get_account_balances():
+    global  url
+    path = "/capi/v2/account/balances"
+    url = f"{url}{path}"
+    timestamp = str(int(time.time() * 1000))
+    signature = generate_signature_get(secret_key, timestamp,"GET", path, "")
+ 
+    headers = {
         "ACCESS-KEY": api_key,
         "ACCESS-SIGN": signature,
         "ACCESS-TIMESTAMP": timestamp,
@@ -19,26 +34,6 @@ headers = {
         "locale": "en-US"
   }
 
-
-def generate_signature_get(secret_key, timestamp, method, request_path, query_string):
-  message = timestamp + method.upper() + request_path + query_string
-  signature = hmac.new(secret_key.encode(), message.encode(), hashlib.sha256).digest()
-  return base64.b64encode(signature).decode()
-
-def send_request_get(api_key, secret_key, access_passphrase, method, request_path, query_string):
-  timestamp = str(int(time.time() * 1000))
-  signature = generate_signature_get(secret_key, timestamp, method, request_path, query_string)
-  
-
-    # Please replace with the actual API address
-  if method == "GET":
-    response = requests.get(url + request_path+query_string, headers=headers)
-  return response
-
-def weex_get_account_balances():
-    global  url
-    path = "/capi/v2/account/balances"
-    url = f"{url}{path}"
     
     resp = requests.get(url, headers=headers, timeout=20)
     data = resp.json()
