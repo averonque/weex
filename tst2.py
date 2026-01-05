@@ -850,9 +850,9 @@ def analyze():
         "opens": opens,
     }
 
-         payload_context["account"] = 
-        { "usdt_balance": get_usdt_balance()
-    }
+        payload_context["account"] = {
+            "usdt_balance": get_usdt_balance()
+            }
    
         user_prompt = ( "You are a trading signal analyst. Return strict JSON only.\n" "Schema: {decision: 'buy'|'sell'|'hold', confidence: 0..1, rationale: string, amount: float}.\n" "Rules:\n" "- decision must be 'buy', 'sell', or 'hold'.\n" "- amount is the USDT notional to trade, based on account.usdt_balance and risk logic.\n" "- If macro_block is true, prefer 'hold'.\n" "- Only trade during Hunt session (NY AM window).\n" "- Align with HTF bias: below True Daily Open = long only; above True Daily Open = short only.\n" "- Use liquidity zones: BigStops > Stops, HTF > LTF.\n" "- Confidence is a float between 0 and 1.\n" "- rationale must explain why the decision was made (HTF/LTF sweep, bias, liquidity, session).\n\n" "Context:\n" f"{json.dumps(payload_context, ensure_ascii=False)}" )
 
