@@ -37,6 +37,7 @@ def weex_get_account_balances():
     
     resp = requests.get(url, headers=headers, timeout=20)
     data = resp.json()
+    print(data)
     # Simplify: return dict of {asset: balance}
     balances = {}
     for item in data.get("data", []):
