@@ -23,6 +23,7 @@ import base64
 
 # ------------------ Config ------------------
 SPOT_BASE = "https://api-spot.weex.com"
+CONTRACT_BASE = "https://api-contract.weex.com/"
 SYMBOL = os.getenv("WEEX_SYMBOL", "BTCUSDT_SPBL")
 DAILY_PERIOD = os.getenv("DAILY_PERIOD", "1d")
 INTRA_PERIOD = os.getenv("INTRA_PERIOD", "5m")
