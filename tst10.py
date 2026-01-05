@@ -10,6 +10,16 @@ access_passphrase = "weex652694794"
 
 url = "https://api-contract.weex.com/"
 
+headers = {
+        "ACCESS-KEY": api_key,
+        "ACCESS-SIGN": signature,
+        "ACCESS-TIMESTAMP": timestamp,
+        "ACCESS-PASSPHRASE": access_passphrase,
+        "Content-Type": "application/json",
+        "locale": "en-US"
+  }
+
+
 def generate_signature_get(secret_key, timestamp, method, request_path, query_string):
   message = timestamp + method.upper() + request_path + query_string
   signature = hmac.new(secret_key.encode(), message.encode(), hashlib.sha256).digest()
@@ -18,14 +28,7 @@ def generate_signature_get(secret_key, timestamp, method, request_path, query_st
 def send_request_get(api_key, secret_key, access_passphrase, method, request_path, query_string):
   timestamp = str(int(time.time() * 1000))
   signature = generate_signature_get(secret_key, timestamp, method, request_path, query_string)
-  headers = {
-        "ACCESS-KEY": api_key,
-        "ACCESS-SIGN": signature,
-        "ACCESS-TIMESTAMP": timestamp,
-        "ACCESS-PASSPHRASE": access_passphrase,
-        "Content-Type": "application/json",
-        "locale": "en-US"
-  }
+  
 
     # Please replace with the actual API address
   if method == "GET":
