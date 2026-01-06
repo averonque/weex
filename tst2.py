@@ -1002,7 +1002,7 @@ def analyze():
         decision = json.loads(content)
         if not is_ny_hunt_session() or is_red_folder_window():
             print("Framework filter: HOLD — outside Hunt session or Red Folder window")
-         else:
+        else:
             placeOrder(SYMBOL, decision)
 
         return {"data":decision}
