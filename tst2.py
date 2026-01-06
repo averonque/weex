@@ -899,115 +899,115 @@ def analyze():
     if not XAI_API_KEY:
         raise HTTPException(status_code=500, detail="XAI_API_KEY not set")
 
-    try:
-        # --- Data ---
-        daily = weex_get_candles(SYMBOL, DAILY_PERIOD, CANDLE_LIMIT_DAILY)
-        intra = weex_get_candles(SYMBOL, INTRA_PERIOD, CANDLE_LIMIT_INTRA)
-        depth = weex_get_depth(SYMBOL, 20)
+#try:
+    # --- Data ---
+    daily = weex_get_candles(SYMBOL, DAILY_PERIOD, CANDLE_LIMIT_DAILY)
+    intra = weex_get_candles(SYMBOL, INTRA_PERIOD, CANDLE_LIMIT_INTRA)
+    depth = weex_get_depth(SYMBOL, 20)
 
-        ret5, volatility, obImbalance, spread = compute_features(intra, depth)
+    ret5, volatility, obImbalance, spread = compute_features(intra, depth)
 
-        # --- Dynamic range model ---
-        drm = DynamicRangeModel(daily_df=daily, intraday_df=intra)
-        trades = drm.simulate_htf(use_window=40, sl_pct=0.006)
+    # --- Dynamic range model ---
+    drm = DynamicRangeModel(daily_df=daily, intraday_df=intra)
+    trades = drm.simulate_htf(use_window=40, sl_pct=0.006)
 
-        # --- Latest EQ and range percent ---
-        eq40 = float(daily["eq40"].dropna().iloc[-1]) if "eq40" in daily and daily["eq40"].notna().any() else None
-        high40 = float(daily["high40"].dropna().iloc[-1]) if "high40" in daily and daily["high40"].notna().any() else None
-        low40 = float(daily["low40"].dropna().iloc[-1]) if "low40" in daily and daily["low40"].notna().any() else None
-        last_close = float(intra["close"].iloc[-1]) if len(intra) else None
-        percent40 = percenter(high40, low40, last_close) if last_close is not None else None
+    # --- Latest EQ and range percent ---
+    eq40 = float(daily["eq40"].dropna().iloc[-1]) if "eq40" in daily and daily["eq40"].notna().any() else None
+    high40 = float(daily["high40"].dropna().iloc[-1]) if "high40" in daily and daily["high40"].notna().any() else None
+    low40 = float(daily["low40"].dropna().iloc[-1]) if "low40" in daily and daily["low40"].notna().any() else None
+    last_close = float(intra["close"].iloc[-1]) if len(intra) else None
+    percent40 = percenter(high40, low40, last_close) if last_close is not None else None
 
-        # --- Build context ---
-        payload_context = {
-            "symbol": SYMBOL,
-            "features": {
-                "ret5": ret5,
-                "volatility": volatility,
-                "obImbalance": obImbalance,
-                "spread": spread,
-                "macro_block": check_macro_block(),
-            },
-            "dynamic_range": {
-                "eq40": eq40,
-                "high40": high40,
-                "low40": low40,
-                "percent40": percent40,
-            },
-            "htf_candidates": trades[-5:] if trades else [],
+    # --- Build context ---
+    payload_context = {
+        "symbol": SYMBOL,
+        "features": {
+            "ret5": ret5,
+            "volatility": volatility,
+            "obImbalance": obImbalance,
+            "spread": spread,
+            "macro_block": check_macro_block(),
+        },
+        "dynamic_range": {
+            "eq40": eq40,
+            "high40": high40,
+            "low40": low40,
+            "percent40": percent40,
+        },
+        "htf_candidates": trades[-5:] if trades else [],
+    }
+    daily = weex_get_candles(SYMBOL, DAILY_PERIOD, CANDLE_LIMIT_DAILY)
+    intra = weex_get_candles(SYMBOL, INTRA_PERIOD, CANDLE_LIMIT_INTRA)
+
+    htf_zones = detect_htf_stops(daily)
+    ltf_zones = detect_ltf_stops(intra)
+    zones = rank_liquidity_zones(htf_zones, ltf_zones)
+
+    last_close = float(intra["close"].iloc[-1]) if len(intra) else None
+    opens = time_based_opens(intra.index[-1]) if len(intra) else {}
+    bias = bias_from_opens(last_close, opens) if last_close else None
+
+    
+
+
+    payload_context["liquidity"] = {
+    "bias": bias,
+    "zones": [z.__dict__ for z in zones],
+    "opens": opens,
+}
+
+    payload_context["account"] = {
+        "usdt_balance": get_usdt_balance()
         }
-        daily = weex_get_candles(SYMBOL, DAILY_PERIOD, CANDLE_LIMIT_DAILY)
-        intra = weex_get_candles(SYMBOL, INTRA_PERIOD, CANDLE_LIMIT_INTRA)
 
-        htf_zones = detect_htf_stops(daily)
-        ltf_zones = detect_ltf_stops(intra)
-        zones = rank_liquidity_zones(htf_zones, ltf_zones)
+    user_prompt = ( "You are a trading signal analyst. Return strict JSON only.\n" "Schema: {decision: 'buy'|'sell'|'hold', confidence: 0..1, rationale: string, amount: float}.\n" "Rules:\n" "- decision must be 'buy', 'sell', or 'hold'.\n" "- amount is the USDT notional to trade, based on account.usdt_balance and risk logic.\n" "- If macro_block is true, prefer 'hold'.\n" "- Only trade during Hunt session (NY AM window).\n" "- Align with HTF bias: below True Daily Open = long only; above True Daily Open = short only.\n" "- Use liquidity zones: BigStops > Stops, HTF > LTF.\n" "- Confidence is a float between 0 and 1.\n" "- rationale must explain why the decision was made (HTF/LTF sweep, bias, liquidity, session).\n\n" "Context:\n" f"{json.dumps(payload_context, ensure_ascii=False)}" )
 
-        last_close = float(intra["close"].iloc[-1]) if len(intra) else None
-        opens = time_based_opens(intra.index[-1]) if len(intra) else {}
-        bias = bias_from_opens(last_close, opens) if last_close else None
-
-        
-
-
-        payload_context["liquidity"] = {
-        "bias": bias,
-        "zones": [z.__dict__ for z in zones],
-        "opens": opens,
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {XAI_API_KEY}",
+    }
+    body = {
+        "model": XAI_MODEL,
+        "messages": [
+            {"role": "system", "content": "Return only JSON. No prose."},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.2,
+        "stream": False,
     }
 
-        payload_context["account"] = {
-            "usdt_balance": get_usdt_balance()
-            }
-   
-        user_prompt = ( "You are a trading signal analyst. Return strict JSON only.\n" "Schema: {decision: 'buy'|'sell'|'hold', confidence: 0..1, rationale: string, amount: float}.\n" "Rules:\n" "- decision must be 'buy', 'sell', or 'hold'.\n" "- amount is the USDT notional to trade, based on account.usdt_balance and risk logic.\n" "- If macro_block is true, prefer 'hold'.\n" "- Only trade during Hunt session (NY AM window).\n" "- Align with HTF bias: below True Daily Open = long only; above True Daily Open = short only.\n" "- Use liquidity zones: BigStops > Stops, HTF > LTF.\n" "- Confidence is a float between 0 and 1.\n" "- rationale must explain why the decision was made (HTF/LTF sweep, bias, liquidity, session).\n\n" "Context:\n" f"{json.dumps(payload_context, ensure_ascii=False)}" )
+    resp = requests.post(XAI_API_URL, headers=headers, json=body, timeout=30)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {XAI_API_KEY}",
-        }
-        body = {
-            "model": XAI_MODEL,
-            "messages": [
-                {"role": "system", "content": "Return only JSON. No prose."},
-                {"role": "user", "content": user_prompt},
-            ],
-            "temperature": 0.2,
-            "stream": False,
-        }
+    start_marker = '"content":"'
+    start_idx = resp.text.find(start_marker)
+    if start_idx == -1:
+        raise ValueError("content field not found")
 
-        resp = requests.post(XAI_API_URL, headers=headers, json=body, timeout=30)
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    # Move past the marker
+    start_idx += len(start_marker)
 
-        start_marker = '"content":"'
-        start_idx = resp.text.find(start_marker)
-        if start_idx == -1:
-            raise ValueError("content field not found")
+    # Find the closing quote for content (before ,"refusal")
+    end_idx = resp.text.find('"refusal"', start_idx)
+    if end_idx == -1:
+        raise ValueError("end of content not found")
 
-        # Move past the marker
-        start_idx += len(start_marker)
+    # Step back to the last quote before "refusal"
+    end_idx = resp.text.rfind('"', start_idx, end_idx)
 
-        # Find the closing quote for content (before ,"refusal")
-        end_idx = resp.text.find('"refusal"', start_idx)
-        if end_idx == -1:
-            raise ValueError("end of content not found")
+    content = resp.text[start_idx:end_idx]
 
-        # Step back to the last quote before "refusal"
-        end_idx = resp.text.rfind('"', start_idx, end_idx)
+    content =  content.replace('\\"', '"')
+    decision = json.loads(content)
+    if not is_ny_hunt_session() or is_red_folder_window():
+        print("Framework filter: HOLD — outside Hunt session or Red Folder window")
+    else:
+        placeOrder(SYMBOL, decision)
 
-        content = resp.text[start_idx:end_idx]
-    
-        content =  content.replace('\\"', '"')
-        decision = json.loads(content)
-        if not is_ny_hunt_session() or is_red_folder_window():
-            print("Framework filter: HOLD — outside Hunt session or Red Folder window")
-        else:
-            placeOrder(SYMBOL, decision)
+    return {"data":decision}
 
-        return {"data":decision}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"analyze error: {e}")
+#except HTTPException:
+ #   raise
+#except Exception as e:
+ #   raise HTTPException(status_code=500, detail=f"analyze error: {e}")
