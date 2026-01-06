@@ -4,7 +4,7 @@ import json
 import requests
 import pandas as pd
 import feedparser
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import pytz
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
@@ -19,6 +19,10 @@ import time
 import hmac
 import hashlib
 import base64
+from bs4 import BeautifulSoup
+import pytz
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
 
 
 # ------------------ Config ------------------
@@ -37,18 +41,7 @@ XAI_MODEL = os.getenv("XAI_MODEL", "grok-4-1-fast-reasoning")
 
 
 
-
-
-
-
-
-
-
-
 app = FastAPI(title="Dynamic Range + WEEX + xAI", version="1.0.0")
-
-
-
 
 
 
@@ -68,8 +61,6 @@ LONDON_START = dtime(2, 0)
 LONDON_END   = dtime(5, 0)
 
 
-from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
 
 @dataclass
 class LiquidityZone:
@@ -794,6 +785,115 @@ def get_usdt_balance() -> float:
     return 0.0
 
 
+
+
+def fetch_red_folder_events():
+    """
+    Scrape ForexFactory calendar for high-impact USD events.
+    Returns a list of datetime objects in NY timezone.
+    """
+    url = "https://www.forexfactory.com/calendar"
+    resp = requests.get(url, timeout=15)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    ny_tz = pytz.timezone("America/New_York")
+    events = []
+
+    # Example parsing logic (depends on actual HTML structure)
+    for row in soup.select("tr.calendar__row"):
+        currency = row.select_one(".calendar__currency").get_text(strip=True)
+        impact = row.select_one(".calendar__impact").get("title", "")
+        time_str = row.select_one(".calendar__time").get_text(strip=True)
+
+        if currency == "USD" and "High" in impact:
+            # Parse time string into datetime
+            try:
+                event_time = datetime.strptime(time_str, "%I:%M%p").time()
+                today = datetime.now(ny_tz).date()
+                event_dt = ny_tz.localize(datetime.combine(today, event_time))
+                events.append(event_dt)
+            except Exception:
+                continue
+    return events
+
+def is_ny_hunt_session() -> bool:
+    """
+    Returns True if current time is within NY Hunt session (8:30–11:30 AM New York time).
+    """
+    ny_tz = pytz.timezone("America/New_York")
+    now_ny = datetime.now(ny_tz).time()
+
+    start = time(8, 30)
+    end = time(11, 30)
+
+    return start <= now_ny <= end
+
+
+def generate_signature(secret_key, timestamp, method, request_path, query_string, body):
+  message = timestamp + method.upper() + request_path + query_string + str(body)
+  signature = hmac.new(secret_key.encode(), message.encode(), hashlib.sha256).digest()
+  return base64.b64encode(signature).decode()
+
+def send_request_post(api_key, secret_key, access_passphrase, method, request_path, query_string, body):
+  timestamp = str(int(time.time() * 1000))
+  body = json.dumps(body)
+  signature = generate_signature(secret_key, timestamp, method, request_path, query_string, body)
+  headers = {
+        "ACCESS-KEY": api_key,
+        "ACCESS-SIGN": signature,
+        "ACCESS-TIMESTAMP": timestamp,
+        "ACCESS-PASSPHRASE": access_passphrase,
+        "Content-Type": "application/json",
+        "locale": "en-US"
+  }
+  url = "https://api-contract.weex.com/"  # Please replace with the actual API address
+  if method == "POST":
+    response = requests.post(url + request_path, headers=headers, data=body)
+  return response
+
+def placeOrder(symbol, decision):
+    side = decision["decision"]
+    amount_usdt = float(decision["amount"])
+    balance = get_usdt_balance()
+
+    # Risk cap: max 2% intraday, 3% pivotal
+    max_risk_pct = 0.02 if decision.get("setup") == "intraday" else 0.03
+    max_amount = balance * max_risk_pct
+    safe_amount = min(amount_usdt, max_amount)
+
+    ticker = weex_get_ticker(symbol)
+    last_price = float(ticker["last"])
+    size = round(safe_amount / last_price, 6)
+
+    body = {
+        "symbol": symbol,
+        "client_oid": str(int(time.time()*1000)),
+        "size": str(size),
+        "type": "1" if side == "buy" else "2",
+        "order_type": "1",  # market
+        "match_price": "0"
+    }
+    return send_request_post(api_key, secret_key, access_passphrase,
+                             "POST", "/capi/v2/order/placeOrder", "", body).json()
+
+
+def is_red_folder_window(events=None) -> bool:
+    """
+    Returns True if current NY time is within ±30 minutes of any Red Folder event.
+    """
+    ny_tz = pytz.timezone("America/New_York")
+    now_ny = datetime.now(ny_tz)
+
+    if events is None:
+        events = fetch_red_folder_events()
+
+    for event in events:
+        if abs((now_ny - event).total_seconds()) <= 30 * 60:
+            return True
+    return False
+
+
 @app.get("/analyze")
 def analyze():
     if not XAI_API_KEY:
@@ -899,7 +999,14 @@ def analyze():
         content = resp.text[start_idx:end_idx]
     
         content =  content.replace('\\"', '"')
-        return {"data":json.loads(content)}
+        decision = json.loads(content)
+        if not is_ny_hunt_session() or is_red_folder_window():
+            print("Framework filter: HOLD — outside Hunt session or Red Folder window")
+         else:
+            placeOrder(SYMBOL, decision)
+
+        return {"data":decision}
+
     except HTTPException:
         raise
     except Exception as e:
