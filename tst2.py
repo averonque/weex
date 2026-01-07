@@ -1038,8 +1038,8 @@ async def interval_runner():
             async with runner_lock:
                 resp = analyze_and_trade()
              #   logger.info(f"interval_run: {resp}")
-        except Exception:
-            print("BAD")
+        except Exception as e:
+            print(e)
            # logger.exception("Interval run failed")
         await asyncio.sleep(INTERVAL_SECONDS)
 
