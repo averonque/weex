@@ -871,6 +871,7 @@ def weex_get_ticker(symbol: str) -> Dict[str, Any]:
 
 
 def placeOrder(symbol, decision):
+    print(decision)
     side = decision["decision"]
     decision["amount"] = 1
     amount_usdt = float(decision["amount"])
@@ -888,7 +889,7 @@ def placeOrder(symbol, decision):
     size = round(safe_amount / last_price, 6)
 
     body = {
-        "symbol": symbol,
+        "symbol": "BTCUSDT",
         "client_oid": str(int(time.time()*1000)),
         "size": str(size),
         "type": "1" if side == "buy" else "2",
@@ -920,7 +921,7 @@ def is_red_folder_window(events=None) -> bool:
 
 @app.get("/analyze")
 def analyze_and_trade():
-    print(XAI_API_KEY)
+    #print(XAI_API_KEY)
     if not XAI_API_KEY:
 
         raise HTTPException(status_code=500, detail="XAI_API_KEY not set")
