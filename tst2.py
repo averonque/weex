@@ -855,8 +855,8 @@ def send_request_post(api_key, secret_key, access_passphrase, method, request_pa
 
 def weex_get_ticker(symbol: str) -> Dict[str, Any]:
     # Market ticker endpoint (adjust path if your env differs)
-    path = f"/capi/v2/market/ticker?symbol={symbol}"
-    url = f"{CONTRACT_BASE}{path}"
+    path = f"/api/v2/market/ticker?symbol={symbol}"
+    url = f"{SPOT_BASE}{path}"
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
     data = resp.json()
