@@ -24,6 +24,11 @@ import pytz
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 import asyncio
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+london_tz = pytz.timezone("Europe/London")
+
+
 
 # ------------------ Config ------------------
 SPOT_BASE = "https://api-spot.weex.com"
@@ -51,7 +56,8 @@ runner_lock = asyncio.Lock()
 
 # --- Session windows in NY time ---
 NY_TZ = TZ  # uses your configured America/New_York
-
+london = pytz.timezone("Europe/London") 
+now_london = datetime.now(london)
 HUNT_START = dtime(7, 0)
 HUNT_END   = dtime(11, 45)
 
@@ -1047,15 +1053,48 @@ def analyze_and_trade():
 
 
 async def interval_runner():
-    while True:
-        try:
-            async with runner_lock:
-                resp = analyze_and_trade()
-             #   logger.info(f"interval_run: {resp}")
-        except Exception as e:
-            print(e)
+    
+    scheduler = BackgroundScheduler()
+
+    # London session trade at 08:00 London time
+    scheduler.add_job(
+        analyze_and_trade,
+        CronTrigger(hour=8, minute=0, timezone=london_tz),
+        args=["London"]
+    )
+
+    # Second trade at 07:00 London time
+    scheduler.add_job(
+        analyze_and_trade,
+        CronTrigger(hour=7, minute=0, timezone=london_tz),
+        args=["Morning"]
+    )
+
+    # Recovery short trade at 11:30 London time
+    scheduler.add_job(
+        analyze_and_trade,
+        CronTrigger(hour=11, minute=30, timezone=london_tz),
+        args=["Recovery"],
+        kwargs={"force_short": True}
+    )
+
+    scheduler.start()
+
+    try:
+        while True:
+            time.sleep(60)
+    except KeyboardInterrupt:
+        scheduler.shutdown()
+
+   # while True:
+       # try:
+         #   async with runner_lock:
+              #  resp = analyze_and_trade()
+          #   #   logger.info(f"interval_run: {resp}")
+      #  except Exception as e:
+        #    print(e)
            # logger.exception("Interval run failed")
-        await asyncio.sleep(INTERVAL_SECONDS)
+        #await asyncio.sleep(INTERVAL_SECONDS)
 
 @app.on_event("startup")
 async def startup_event():
