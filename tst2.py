@@ -2,9 +2,9 @@ import os
 import math
 import json
 import requests
-import pandas as pd
+import pandas as pd``
 import feedparser
-from datetime import datetime, timezone, timedelta, time
+from datetime import datetime, timezone, timedelta
 import pytz
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
@@ -824,8 +824,8 @@ def is_ny_hunt_session() -> bool:
     ny_tz = pytz.timezone("America/New_York")
     now_ny = datetime.now(ny_tz).time()
 
-    start = datetime.time(8, 30)
-    end = datetime.time(11, 30)
+    start = dtime(8, 30)
+    end = dtime(11, 30)
 
     return start <= now_ny <= end
 
