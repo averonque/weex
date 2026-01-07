@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 import pytz
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
-
+import asyncio
 
 # ------------------ Config ------------------
 SPOT_BASE = "https://api-spot.weex.com"
@@ -42,11 +42,12 @@ XAI_MODEL = os.getenv("XAI_MODEL", "grok-4-1-fast-reasoning")
 api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
 secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
 access_passphrase = "weex652694794"
+INTERVAL_SECONDS = int(os.getenv("ANALYZE_INTERVAL_SECONDS", "60"))  # run every 60s
 
 
 app = FastAPI(title="Dynamic Range + WEEX + xAI", version="1.0.0")
 
-
+runner_lock = asyncio.Lock()
 
 # --- Session windows in NY time ---
 NY_TZ = TZ  # uses your configured America/New_York
@@ -894,6 +895,7 @@ def placeOrder(symbol, decision):
     }
     result = send_request_post(api_key, secret_key, access_passphrase,
                              "POST", "/capi/v2/order/placeOrder", "", body).json()
+    print(result)
     return result
 
 
@@ -914,7 +916,7 @@ def is_red_folder_window(events=None) -> bool:
 
 
 @app.get("/analyze")
-def analyze():
+def analyze_and_trade():
     if not XAI_API_KEY:
         raise HTTPException(status_code=500, detail="XAI_API_KEY not set")
 
@@ -1026,6 +1028,25 @@ def analyze():
         placeOrder(SYMBOL, decision)
 
     return {"data":decision}
+
+
+async def interval_runner():
+    while True:
+        try:
+            async with runner_lock:
+                resp = analyze_and_trade()
+             #   logger.info(f"interval_run: {resp}")
+        except Exception:
+            print("BAD")
+           # logger.exception("Interval run failed")
+        await asyncio.sleep(INTERVAL_SECONDS)
+
+@app.on_event("startup")
+async def startup_event():
+    # Optionally pre-populate RED_FOLDER_EVENTS here
+    # RED_FOLDER_EVENTS.append(pytz.timezone("America/New_York").localize(datetime(2026, 1, 7, 8, 30)))
+    asyncio.create_task(interval_runner())
+
 
 #except HTTPException:
  #   raise
