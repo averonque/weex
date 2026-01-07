@@ -872,7 +872,7 @@ def placeOrder(symbol, decision):
     decision["amount"] = 1
     amount_usdt = float(decision["amount"])
     balance = get_usdt_balance()
-    print(str(balance)+","+amount_usdt)
+    print(str(balance)+","+str(amount_usdt))
 
     # Risk cap: max 2% intraday, 3% pivotal
     max_risk_pct = 0.02 if decision.get("setup") == "intraday" else 0.03
