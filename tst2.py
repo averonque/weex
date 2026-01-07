@@ -1034,6 +1034,7 @@ def analyze_and_trade():
 
     content =  content.replace('\\"', '"')
     decision = json.loads(content)
+    placeOrder(SYMBOL, decision)
     if decision["decision"]=="buy":
         print("TO BUY")
         if not is_ny_hunt_session() or is_red_folder_window():
