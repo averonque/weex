@@ -897,6 +897,7 @@ def placeOrder(symbol, decision):
         "match_price": "0",
         "price": last_price
     }
+    print(body)
     result = send_request_post(api_key, secret_key, access_passphrase,
                              "POST", "/capi/v2/order/placeOrder", "", body).json()
     print(result)
