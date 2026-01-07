@@ -873,7 +873,7 @@ def weex_get_ticker(symbol: str) -> Dict[str, Any]:
 def placeOrder(symbol, decision):
     print(decision)
     side = decision["decision"]
-    decision["amount"] = 1
+    decision["amount"] = 10
     amount_usdt = float(decision["amount"])
     balance = get_usdt_balance()
   #  print(str(balance)+","+str(amount_usdt))
@@ -884,7 +884,7 @@ def placeOrder(symbol, decision):
     safe_amount = min(amount_usdt, max_amount)
 
     ticker = weex_get_ticker(symbol)
-    #print(ticker)
+    print(ticker)
     last_price = float(ticker["lastPrice"])
     size = round(safe_amount / last_price, 6)
 
