@@ -39,6 +39,9 @@ XAI_API_URL = "https://api.x.ai/v1/chat/completions"
 XAI_API_KEY = os.getenv("XAI_API_KEY") or os.getenv("YOUR_XAI_API_KEY")  # allow both env var names
 XAI_MODEL = os.getenv("XAI_MODEL", "grok-4-1-fast-reasoning")
 
+api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
+secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
+access_passphrase = "weex652694794"
 
 
 app = FastAPI(title="Dynamic Range + WEEX + xAI", version="1.0.0")
@@ -745,9 +748,6 @@ def features():
         raise HTTPException(status_code=500, detail=f"features error: {e}")
 
 
-api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
-secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
-access_passphrase = "weex652694794"
 
 def generate_signature_get(secret_key, timestamp, method, request_path, query_string):
   message = timestamp + method.upper() + request_path + query_string
@@ -869,8 +869,10 @@ def weex_get_ticker(symbol: str) -> Dict[str, Any]:
 
 def placeOrder(symbol, decision):
     side = decision["decision"]
+    decision["amount"] = 1
     amount_usdt = float(decision["amount"])
     balance = get_usdt_balance()
+    print(str(balance)+","+amount_usdt)
 
     # Risk cap: max 2% intraday, 3% pivotal
     max_risk_pct = 0.02 if decision.get("setup") == "intraday" else 0.03
@@ -889,8 +891,9 @@ def placeOrder(symbol, decision):
         "order_type": "1",  # market
         "match_price": "0"
     }
-    return send_request_post(api_key, secret_key, access_passphrase,
+    result = send_request_post(api_key, secret_key, access_passphrase,
                              "POST", "/capi/v2/order/placeOrder", "", body).json()
+    return result
 
 
 def is_red_folder_window(events=None) -> bool:
