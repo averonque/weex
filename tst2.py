@@ -1034,12 +1034,14 @@ def analyze_and_trade():
 
     content =  content.replace('\\"', '"')
     decision = json.loads(content)
-    placeOrder(SYMBOL, decision)
-    if not is_ny_hunt_session() or is_red_folder_window():
-        print("Framework filter: HOLD — outside Hunt session or Red Folder window")
+    if decision["decision"]=="buy":
+        print("TO BUY")
+        if not is_ny_hunt_session() or is_red_folder_window():
+            print("Framework filter: HOLD — outside Hunt session or Red Folder window")
+        else:
+            placeOrder(SYMBOL, decision)
     else:
-        placeOrder(SYMBOL, decision)
-
+        print(decision["decision"])
     return {"data":decision}
 
 
