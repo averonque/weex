@@ -866,6 +866,11 @@ def weex_get_ticker(symbol: str) -> Dict[str, Any]:
     return data.get("data", data)
 
 
+def normalize_size(raw_size: float, step: float = 0.0001) -> float:
+    # Floor to nearest step
+    return math.floor(raw_size / step) * step
+
+
 
 
 
@@ -887,11 +892,12 @@ def placeOrder(symbol, decision):
     print(ticker)
     last_price = float(ticker["lastPrice"])
     size = round(safe_amount / last_price, 6)
+    safe_size = normalize_size(size, 0.0001)  # → 0.0001
 
     body = {
         "symbol": "cmt_btcusdt",
         "client_oid": str(int(time.time()*1000)),
-        "size": str(size),
+        "size": str(safe_size),
         "type": "1" if side == "buy" else "2",
         "order_type": "1",  # market
         "match_price": "0",
