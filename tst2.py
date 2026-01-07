@@ -794,8 +794,10 @@ def fetch_red_folder_events():
     Returns a list of datetime objects in NY timezone.
     """
     url = "https://www.forexfactory.com/calendar"
-    resp = requests.get(url, timeout=15)
-    resp.raise_for_status()
+    #resp = requests.get(url, timeout=15)
+    resp = requests.get( "https://www.forexfactory.com/calendar", headers={"User-Agent": "Mozilla/5.0"}, timeout=15 )
+    #print(resp.text)
+   # resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
     ny_tz = pytz.timezone("America/New_York")
@@ -891,7 +893,8 @@ def placeOrder(symbol, decision):
         "size": str(size),
         "type": "1" if side == "buy" else "2",
         "order_type": "1",  # market
-        "match_price": "0"
+        "match_price": "0",
+        "price": last_price
     }
     result = send_request_post(api_key, secret_key, access_passphrase,
                              "POST", "/capi/v2/order/placeOrder", "", body).json()
