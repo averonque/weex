@@ -878,7 +878,7 @@ def normalize_size(raw_size: float, step: float = 0.0001) -> float:
 def placeOrder(symbol, decision):
     print(decision)
     side = decision["decision"]
-    #decision["amount"] = 10
+    decision["amount"] = 10
     amount_usdt = float(decision["amount"])
     balance = get_usdt_balance()
   #  print(str(balance)+","+str(amount_usdt))
