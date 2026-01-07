@@ -2,7 +2,7 @@ import os
 import math
 import json
 import requests
-import pandas as pd``
+import pandas as pd
 import feedparser
 from datetime import datetime, timezone, timedelta
 import pytz
