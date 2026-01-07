@@ -824,8 +824,8 @@ def is_ny_hunt_session() -> bool:
     ny_tz = pytz.timezone("America/New_York")
     now_ny = datetime.now(ny_tz).time()
 
-    start = time(8, 30)
-    end = time(11, 30)
+    start = datetime.time(8, 30)
+    end = datetime.time(11, 30)
 
     return start <= now_ny <= end
 
