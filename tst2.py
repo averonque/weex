@@ -1059,23 +1059,23 @@ async def interval_runner():
     # London session trade at 08:00 London time
     scheduler.add_job(
         analyze_and_trade,
-        CronTrigger(hour=8, minute=0, timezone=london_tz),
-        args=["London"]
+        CronTrigger(hour=8, minute=0, timezone=london_tz)
+        
     )
 
     # Second trade at 07:00 London time
     scheduler.add_job(
         analyze_and_trade,
-        CronTrigger(hour=7, minute=0, timezone=london_tz),
-        args=["Morning"]
+        CronTrigger(hour=7, minute=0, timezone=london_tz)
+       
     )
 
     # Recovery short trade at 11:30 London time
     scheduler.add_job(
         analyze_and_trade,
-        CronTrigger(hour=11, minute=30, timezone=london_tz),
-        args=["Recovery"],
-        kwargs={"force_short": True}
+        CronTrigger(hour=11, minute=30, timezone=london_tz)
+     
+       
     )
 
     scheduler.start()
