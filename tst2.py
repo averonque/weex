@@ -876,7 +876,7 @@ def placeOrder(symbol, decision):
     decision["amount"] = 1
     amount_usdt = float(decision["amount"])
     balance = get_usdt_balance()
-    print(str(balance)+","+str(amount_usdt))
+  #  print(str(balance)+","+str(amount_usdt))
 
     # Risk cap: max 2% intraday, 3% pivotal
     max_risk_pct = 0.02 if decision.get("setup") == "intraday" else 0.03
@@ -884,12 +884,12 @@ def placeOrder(symbol, decision):
     safe_amount = min(amount_usdt, max_amount)
 
     ticker = weex_get_ticker(symbol)
-    print(ticker)
+    #print(ticker)
     last_price = float(ticker["lastPrice"])
     size = round(safe_amount / last_price, 6)
 
     body = {
-        "symbol": "BTCUSDT",
+        "symbol": "BTC_USDT",
         "client_oid": str(int(time.time()*1000)),
         "size": str(size),
         "type": "1" if side == "buy" else "2",
