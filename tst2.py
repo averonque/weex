@@ -889,16 +889,15 @@ def placeOrder(symbol, decision):
     size = round(safe_amount / last_price, 6)
 
     body = {
-       
-        "clientOrderId": str(int(time.time()*1000)),
-        "price": last_price,
-        "symbol": "BTCUSDT_SPBL",
-        "side": "buy",
-        "orderType": "market",
-        "force": "normal",
-        "quantity": "10",
+        "symbol": "cmt_btcusdt",
+        "client_oid": str(int(time.time()*1000)),
+        "size": str(size),
+        "type": "1" if side == "buy" else "2",
+        "order_type": "1",  # market
+        "match_price": "0",
+        "price": last_price
     }
-    print(body)
+   
     result = send_request_post(api_key, secret_key, access_passphrase,
                              "POST", "/capi/v2/order/placeOrder", "", body).json()
     print(result)
