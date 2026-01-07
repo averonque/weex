@@ -852,6 +852,21 @@ def send_request_post(api_key, secret_key, access_passphrase, method, request_pa
     response = requests.post(url + request_path, headers=headers, data=body)
   return response
 
+
+def weex_get_ticker(symbol: str) -> Dict[str, Any]:
+    # Market ticker endpoint (adjust path if your env differs)
+    path = f"/capi/v2/market/ticker?symbol={symbol}"
+    url = f"{CONTRACT_BASE}{path}"
+    resp = requests.get(url, timeout=10)
+    resp.raise_for_status()
+    data = resp.json()
+    return data.get("data", data)
+
+
+
+
+
+
 def placeOrder(symbol, decision):
     side = decision["decision"]
     amount_usdt = float(decision["amount"])
@@ -1000,6 +1015,7 @@ def analyze():
 
     content =  content.replace('\\"', '"')
     decision = json.loads(content)
+    placeOrder(SYMBOL, decision)
     if not is_ny_hunt_session() or is_red_folder_window():
         print("Framework filter: HOLD — outside Hunt session or Red Folder window")
     else:
