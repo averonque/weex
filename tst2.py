@@ -917,7 +917,7 @@ def is_red_folder_window(events=None) -> bool:
 
 @app.get("/analyze")
 def analyze_and_trade():
-    print(XAI_API_KEY+"qweqe")
+    print(XAI_API_KEY)
     if not XAI_API_KEY:
 
         raise HTTPException(status_code=500, detail="XAI_API_KEY not set")
