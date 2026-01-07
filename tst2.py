@@ -880,7 +880,8 @@ def placeOrder(symbol, decision):
     safe_amount = min(amount_usdt, max_amount)
 
     ticker = weex_get_ticker(symbol)
-    last_price = float(ticker["last"])
+    print(ticker)
+    last_price = float(ticker["lastPrice"])
     size = round(safe_amount / last_price, 6)
 
     body = {
