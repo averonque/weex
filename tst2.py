@@ -26,9 +26,11 @@ from typing import List, Dict, Any, Optional
 import asyncio
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+
+from decimal import Decimal, ROUND_DOWN
+
+
 london_tz = pytz.timezone("Europe/London")
-
-
 
 # ------------------ Config ------------------
 SPOT_BASE = "https://api-spot.weex.com"
@@ -48,6 +50,7 @@ api_key = "weex_f67d25e3b8c4d7639e7deb7c558016bb"
 secret_key = "29056e6c4da2ea623bdfbf6fb223a48f7d192622e31803e6e64c5ceee3bc2611"
 access_passphrase = "weex652694794"
 INTERVAL_SECONDS = int(os.getenv("ANALYZE_INTERVAL_SECONDS", "60"))  # run every 60s
+LONDON_TZ = pytz.timezone(os.getenv("LONDON_TZ", "Europe/London"))
 
 
 app = FastAPI(title="Dynamic Range + WEEX + xAI", version="1.0.0")
@@ -878,7 +881,8 @@ def normalize_size(raw_size: float, step: float = 0.0001) -> float:
 
 
 
-
+def log_info(msg): 
+    print(f"Time: {now_london_str()} London | {msg}")
 
 
 def placeOrder(symbol, decision):
@@ -894,11 +898,50 @@ def placeOrder(symbol, decision):
     max_amount = balance * max_risk_pct
     safe_amount = min(amount_usdt, max_amount)
 
+
     ticker = weex_get_ticker(symbol)
     print(ticker)
     last_price = float(ticker["lastPrice"])
     size = round(safe_amount / last_price, 6)
     safe_size = normalize_size(size, 0.0001)  # → 0.0001
+
+    price = last_price
+    sig = get_indicator_signal(SYMBOL)
+
+    if not sig["has_signal"]:
+        log_info(f"{session_name}: No indicator signal; standing by")
+        return
+
+    side = "short" if force_short else sig["direction"]
+    if side not in ("long", "short"):
+        log_info(f"{session_name}: Invalid direction from indicator")
+        return
+
+    # Confirm sweep + reclaim gating
+    if not (sig["sweep_flag"] and sig["reclaim_flag"]):
+        log_info(f"{session_name}: Signal present but sweep/reclaim not confirmed; skipping")
+        return
+
+    entry = Decimal(sig["entry_level"] or price)
+    stop = Decimal(sig["stop_level"])
+    if side == "long" and stop >= entry:
+        stop = entry - Decimal("100")  # fallback; replace with your rules
+    if side == "short" and stop <= entry:
+        stop = entry + Decimal("100")
+
+    size = calc_position_size(balance, max_risk_pct, entry, stop)
+    if size <= 0:
+        log_info(f"{session_name}: Size too small or below min notional; skipping")
+        return
+
+    risk_usdt = balance * Decimal(max_risk_pct)
+    tps = sig["tp_levels"] or default_tps(side, float(entry))
+
+    signal_note = f"Stop sweep at {sig['stop_level']}, reclaim confirmed"
+    rationale = f"{session_name} entry | confidence {sig['confidence']:.2f}"
+
+    log_entry(SYMBOL, side, float(entry), float(stop), tps,max_risk_pct, float(risk_usdt), float(size), signal_note, rationale)
+
 
     body = {
         "symbol": "cmt_btcusdt",
@@ -931,9 +974,98 @@ def is_red_folder_window(events=None) -> bool:
             return True
     return False
 
+def now_london_str():
+    return datetime.now(LONDON_TZ).strftime("%Y-%m-%d %H:%M")
+
+
+def log_entry(symbol, side, entry, stop, tps, risk_pct, risk_usdt, size_btc, signal_note, rationale):
+    print(
+        f"Time: {now_london_str()} London | Symbol: {symbol} | Direction: {side} | "
+        f"Entry: {entry:.2f} | Stop: {stop:.2f} | TPs: {tps} | "
+        f"Risk: {risk_pct*100:.1f}% (USDT {risk_usdt:.2f}) | Size: {size_btc:.6f} BTC | "
+        f"Signal: {signal_note} | Rationale: {rationale} | Status: Entered (test)"
+    )
+
+
+
+STEP_SIZE = Decimal("0.0001")
+MIN_NOTIONAL = Decimal("5")  # adjust from GetAllProductInfo
+
+def round_down_step(value: Decimal, step: Decimal) -> Decimal:
+    return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
+
+def calc_position_size(balance_usdt: Decimal, risk_pct: float, entry: float, stop: float) -> Decimal:
+    risk_amount = balance_usdt * Decimal(risk_pct)
+    risk_per_unit = abs(Decimal(entry) - Decimal(stop))
+    if risk_per_unit == 0:
+        return Decimal("0")
+    raw_size = risk_amount / risk_per_unit
+    size = round_down_step(raw_size, STEP_SIZE)
+    # enforce min notional
+    if size * Decimal(entry) < MIN_NOTIONAL:
+        return Decimal("0")
+    return size
+
+
+def suggest_stop(entry_price: float, zones: list, side: str = "long") -> float:
+    if not zones:
+        return entry_price - 100 if side == "long" else entry_price + 100
+    if side == "long":
+        # pick the lowest zone below entry
+        candidates = [z.level for z in zones if z.level < entry_price]
+        return min(candidates) if candidates else entry_price - 100
+    else:
+        # pick the highest zone above entry
+        candidates = [z.level for z in zones if z.level > entry_price]
+        return max(candidates) if candidates else entry_price + 100
+
+def suggest_tps(entry_price: float, zones: list, side: str = "long") -> list:
+    if not zones:
+        step = entry_price * 0.005
+        if side == "long":
+            return [round(entry_price + step, 2),
+                    round(entry_price + 2*step, 2),
+                    round(entry_price + 3*step, 2)]
+        else:
+            return [round(entry_price - step, 2),
+                    round(entry_price - 2*step, 2),
+                    round(entry_price - 3*step, 2)]
+    else:
+        # pick 3 nearest zones in direction of trade
+        if side == "long":
+            candidates = sorted([z.level for z in zones if z.level > entry_price])
+        else:
+            candidates = sorted([z.level for z in zones if z.level < entry_price], reverse=True)
+        return candidates[:3]
+
+def get_indicator_signal(symbol: str):
+    """
+    Return a dict with the indicator decision inputs:
+    {
+      "has_signal": bool,
+      "direction": "long"|"short",
+      "stop_level": float,
+      "sweep_flag": bool,
+      "reclaim_flag": bool,
+      "entry_level": float,  # suggested entry (e.g., reclaim price)
+      "tp_levels": [float, float, float],  # optional
+      "confidence": float  # 0..1
+    }
+    """
+    # TODO: Replace with your real indicator outputs
+    return {
+        "has_signal": False,
+        "direction": "long",
+        "stop_level": 0.0,
+        "sweep_flag": False,
+        "reclaim_flag": False,
+        "entry_level": 0.0,
+        "tp_levels": [],
+        "confidence": 0.0,
+    }
 
 @app.get("/analyze")
-def analyze_and_trade():
+def analyze_and_trade(session_name, force_short=False):
     #print(XAI_API_KEY)
     if not XAI_API_KEY:
 
@@ -958,7 +1090,7 @@ def analyze_and_trade():
     last_close = float(intra["close"].iloc[-1]) if len(intra) else None
     percent40 = percenter(high40, low40, last_close) if last_close is not None else None
 
-    # --- Build context ---
+        # --- Build context ---
     payload_context = {
         "symbol": SYMBOL,
         "features": {
@@ -976,6 +1108,7 @@ def analyze_and_trade():
         },
         "htf_candidates": trades[-5:] if trades else [],
     }
+
     daily = weex_get_candles(SYMBOL, DAILY_PERIOD, CANDLE_LIMIT_DAILY)
     intra = weex_get_candles(SYMBOL, INTRA_PERIOD, CANDLE_LIMIT_INTRA)
 
@@ -987,21 +1120,59 @@ def analyze_and_trade():
     opens = time_based_opens(intra.index[-1]) if len(intra) else {}
     bias = bias_from_opens(last_close, opens) if last_close else None
 
-    
-
-
     payload_context["liquidity"] = {
-    "bias": bias,
-    "zones": [z.__dict__ for z in zones],
-    "opens": opens,
-}
+        "bias": bias,
+        "zones": [z.__dict__ for z in zones],
+        "opens": opens,
+    }
+
+
 
     payload_context["account"] = {
         "usdt_balance": get_usdt_balance()
-        }
+    }
 
-    user_prompt = ( "You are a trading signal analyst. Return strict JSON only.\n" "Schema: {decision: 'buy'|'sell'|'hold', confidence: 0..1, rationale: string, amount: float}.\n" "Rules:\n" "- decision must be 'buy', 'sell', or 'hold'.\n" "- amount is the USDT notional to trade, based on account.usdt_balance and risk logic.\n" "- If macro_block is true, prefer 'hold'.\n" "- Only trade during Hunt session (NY AM window).\n" "- Align with HTF bias: below True Daily Open = long only; above True Daily Open = short only.\n" "- Use liquidity zones: BigStops > Stops, HTF > LTF.\n" "- Confidence is a float between 0 and 1.\n" "- rationale must explain why the decision was made (HTF/LTF sweep, bias, liquidity, session).\n\n" "Context:\n" f"{json.dumps(payload_context, ensure_ascii=False)}" )
+    # Add trade‑specific context
+    payload_context["trade_plan"] = {
+        "entry_price": last_close,
+        "stop_loss": suggest_stop(last_close, zones),   # your function
+        "take_profits": suggest_tps(last_close, zones), # your function
+        "risk_percent": 0.01,
+        "risk_amount_usdt": get_usdt_balance() * 0.01,
+        "position_size_btc": calc_position_size(get_usdt_balance(), 0.01, last_close, suggest_stop(last_close, zones)),
+        "partials": [
+            {"tp": tp, "percent": pct}
+            for tp, pct in zip(suggest_tps(last_close, zones), [30, 40, 30])
+        ]
+    }
 
+    user_prompt = (
+    "You are a trading signal analyst. Return strict JSON only.\n"
+    "Schema: {\n"
+    "  decision: 'buy'|'sell'|'hold',\n"
+    "  confidence: float 0..1,\n"
+    "  rationale: string,\n"
+    "  entry_price: float,\n"
+    "  stop_loss: float,\n"
+    "  take_profits: [float],\n"
+    "  risk_percent: float,\n"
+    "  risk_amount_usdt: float,\n"
+    "  position_size_btc: float,\n"
+    "  partials: [{tp: float, percent: int}]\n"
+    "}\n"
+    "Rules:\n"
+    "- decision must be 'buy', 'sell', or 'hold'.\n"
+    "- risk_amount_usdt is based on account.usdt_balance and risk_percent.\n"
+    "- If macro_block is true, prefer 'hold'.\n"
+    "- Only trade during Hunt session (NY AM window).\n"
+    "- Align with HTF bias: below True Daily Open = long only; above True Daily Open = short only.\n"
+    "- Use liquidity zones: BigStops > Stops, HTF > LTF.\n"
+    "- Confidence is a float between 0 and 1.\n"
+    "- rationale must explain why the decision was made (HTF/LTF sweep, bias, liquidity, session).\n\n"
+    "Context:\n"
+    f"{json.dumps(payload_context, ensure_ascii=False)}"
+)
+    
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {XAI_API_KEY}",
@@ -1059,22 +1230,22 @@ async def interval_runner():
     # London session trade at 08:00 London time
     scheduler.add_job(
         analyze_and_trade,
-        CronTrigger(hour=8, minute=0, timezone=london_tz)
-        
+        CronTrigger(hour=8, minute=0, timezone=london_tz),
+        args=["London"]
     )
 
     # Second trade at 07:00 London time
     scheduler.add_job(
         analyze_and_trade,
-        CronTrigger(hour=7, minute=0, timezone=london_tz)
-       
+        CronTrigger(hour=7, minute=0, timezone=london_tz),
+       args=["Morning"]
     )
 
     # Recovery short trade at 11:30 London time
     scheduler.add_job(
         analyze_and_trade,
-        CronTrigger(hour=11, minute=30, timezone=london_tz)
-     
+        CronTrigger(hour=11, minute=30, timezone=london_tz),
+       args=["Recover"]
        
     )
 
