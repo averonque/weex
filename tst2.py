@@ -994,17 +994,17 @@ MIN_NOTIONAL = Decimal("5")  # adjust from GetAllProductInfo
 def round_down_step(value: Decimal, step: Decimal) -> Decimal:
     return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
 
-def calc_position_size(balance_usdt: Decimal, risk_pct: float, entry: float, stop: float) -> Decimal:
-    risk_amount = balance_usdt * Decimal(risk_pct)
-    risk_per_unit = abs(Decimal(entry) - Decimal(stop))
+def calc_position_size(balance_usdt: float, risk_pct: float, entry: float, stop: float) -> float:
+    risk_amount = balance_usdt * risk_pct
+    risk_per_unit = abs(entry - stop)
     if risk_per_unit == 0:
-        return Decimal("0")
+        return 0.0
     raw_size = risk_amount / risk_per_unit
-    size = round_down_step(raw_size, STEP_SIZE)
-    # enforce min notional
-    if size * Decimal(entry) < MIN_NOTIONAL:
-        return Decimal("0")
+    size = (raw_size // STEP_SIZE) * STEP_SIZE  # STEP_SIZE must be float here
+    if size * entry < MIN_NOTIONAL:
+        return 0.0
     return size
+
 
 
 def suggest_stop(entry_price: float, zones: list, side: str = "long") -> float:
