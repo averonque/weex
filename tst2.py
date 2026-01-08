@@ -912,9 +912,25 @@ def placeOrder(symbol, decision, session_name, force_short=False):
     size = round(safe_amount / last_price, 6)
     safe_size = normalize_size(size, 0.0001)  # → 0.0001
 
+   
+
+    body = {
+        "symbol": "cmt_btcusdt",
+        "client_oid": str(int(time.time()*1000)),
+        "size": str(safe_size),
+        "type": "1" if side == "buy" else "2",
+        "order_type": "1",  # market
+        "match_price": "0",
+        "price": last_price
+    }
+    print(body)
+    result = send_request_post(api_key, secret_key, access_passphrase,
+                             "POST", "/capi/v2/order/placeOrder", "", body).json()
+    print(result)
     price = last_price
     sig = get_indicator_signal(SYMBOL)
-
+    print("SIG HERE")
+    print(sig)
     if not sig["has_signal"]:
         log_info(f"{session_name}: No indicator signal; standing by")
         return
@@ -949,20 +965,6 @@ def placeOrder(symbol, decision, session_name, force_short=False):
 
     log_entry(SYMBOL, side, float(entry), float(stop), tps,max_risk_pct, float(risk_usdt), float(size), signal_note, rationale)
 
-
-    body = {
-        "symbol": "cmt_btcusdt",
-        "client_oid": str(int(time.time()*1000)),
-        "size": str(safe_size),
-        "type": "1" if side == "buy" else "2",
-        "order_type": "1",  # market
-        "match_price": "0",
-        "price": last_price
-    }
-    print(body)
-    result = send_request_post(api_key, secret_key, access_passphrase,
-                             "POST", "/capi/v2/order/placeOrder", "", body).json()
-    print(result)
     return result
 
 
