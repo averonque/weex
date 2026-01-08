@@ -1226,6 +1226,7 @@ def analyze_and_trade(session_name, force_short=False):
 async def interval_runner():
     
     scheduler = BackgroundScheduler()
+    analyze_and_trade("London")
 
     # London session trade at 08:00 London time
     scheduler.add_job(
