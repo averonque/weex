@@ -885,7 +885,7 @@ def log_info(msg):
     print(f"Time: {now_london_str()} London | {msg}")
 
 
-def placeOrder(symbol, decision):
+def placeOrder(symbol, decision, session_name):
     print(decision)
     side = decision["decision"]
     decision["amount"] = 10
@@ -1211,13 +1211,13 @@ def analyze_and_trade(session_name, force_short=False):
 
     content =  content.replace('\\"', '"')
     decision = json.loads(content)
-    placeOrder(SYMBOL, decision)
+    placeOrder(SYMBOL, decision, session_name)
     if decision["decision"]=="buy":
         print("TO BUY")
         if not is_ny_hunt_session() or is_red_folder_window():
             print("Framework filter: HOLD — outside Hunt session or Red Folder window")
         else:
-            placeOrder(SYMBOL, decision)
+            placeOrder(SYMBOL, decision, session_name)
     else:
         print(decision["decision"])
     return {"data":decision}
