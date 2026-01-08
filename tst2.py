@@ -988,8 +988,8 @@ def log_entry(symbol, side, entry, stop, tps, risk_pct, risk_usdt, size_btc, sig
 
 
 
-STEP_SIZE = Decimal("0.0001")
-MIN_NOTIONAL = Decimal("5")  # adjust from GetAllProductInfo
+STEP_SIZE = 0.0001 
+MIN_NOTIONAL = 5.0
 
 def round_down_step(value: Decimal, step: Decimal) -> Decimal:
     return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
