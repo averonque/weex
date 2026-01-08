@@ -1219,6 +1219,7 @@ def analyze_and_trade(session_name, force_short=False):
     content = resp.text[start_idx:end_idx]
 
     content =  content.replace('\\"', '"')
+    print(content)
     decision = json.loads(content)
     placeOrder(SYMBOL, decision, session_name)
     if decision["decision"]=="buy":
