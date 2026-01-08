@@ -884,8 +884,15 @@ def normalize_size(raw_size: float, step: float = 0.0001) -> float:
 def log_info(msg): 
     print(f"Time: {now_london_str()} London | {msg}")
 
+def default_tps(side: str, entry: float):
+    # Simple structure: 3 targets spaced by 0.5% / 1.0% / 1.5%
+    step = entry * 0.005
+    if side == "long":
+        return [round(entry + step, 2), round(entry + 2*step, 2), round(entry + 3*step, 2)]
+    else:
+        return [round(entry - step, 2), round(entry - 2*step, 2), round(entry - 3*step, 2)]
 
-def placeOrder(symbol, decision, session_name):
+def placeOrder(symbol, decision, session_name, force_short=False):
     print(decision)
     side = decision["decision"]
     decision["amount"] = 10
@@ -1158,10 +1165,12 @@ def analyze_and_trade(session_name, force_short=False):
     "  risk_percent: float,\n"
     "  risk_amount_usdt: float,\n"
     "  position_size_btc: float,\n"
+    "  amount: float,\n"
     "  partials: [{tp: float, percent: int}]\n"
     "}\n"
     "Rules:\n"
     "- decision must be 'buy', 'sell', or 'hold'.\n"
+    "- If decision is 'buy' or 'sell', you must also output 'amount' as the USDT notional to trade.\n"
     "- risk_amount_usdt is based on account.usdt_balance and risk_percent.\n"
     "- If macro_block is true, prefer 'hold'.\n"
     "- Only trade during Hunt session (NY AM window).\n"
@@ -1172,7 +1181,7 @@ def analyze_and_trade(session_name, force_short=False):
     "Context:\n"
     f"{json.dumps(payload_context, ensure_ascii=False)}"
 )
-    
+
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {XAI_API_KEY}",
