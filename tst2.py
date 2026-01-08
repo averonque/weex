@@ -879,7 +879,8 @@ def normalize_size(raw_size: float, step: float = 0.0001) -> float:
     # Floor to nearest step
     return math.floor(raw_size / step) * step
 
-
+def round_down_step(value: Decimal, step: Decimal) -> Decimal: 
+    return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
 
 def log_info(msg): 
     print(f"Time: {now_london_str()} London | {msg}")
@@ -910,14 +911,16 @@ def placeOrder(symbol, decision, session_name, force_short=False):
     print(ticker)
     last_price = float(ticker["lastPrice"])
     size = round(safe_amount / last_price, 6)
-    safe_size = normalize_size(size, 0.0001)  # → 0.0001
-
+    #size = Decimal(str(decision["position_size_btc"])) 
+    size = round_down_step(size, STEP_SIZE)
+    #safe_size = normalize_size(size, 0.0001)  # → 0.0001
+    print("HERE >>>"+str(size))
    
 
     body = {
         "symbol": "cmt_btcusdt",
         "client_oid": str(int(time.time()*1000)),
-        "size": str(safe_size),
+        "size": str(size),
         "type": "1" if side == "buy" else "2",
         "order_type": "1",  # market
         "match_price": "0",
