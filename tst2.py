@@ -920,7 +920,8 @@ def placeOrder(symbol, decision, session_name, force_short=False):
     body = {
         "symbol": "cmt_btcusdt",
         "client_oid": str(int(time.time()*1000)),
-        "size": str(size),
+      #  "size": str(size),
+        "size": f"{size:.4f}",
         "type": "1" if side == "buy" else "2",
         "order_type": "1",  # market
         "match_price": "0",
