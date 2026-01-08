@@ -879,8 +879,8 @@ def normalize_size(raw_size: float, step: float = 0.0001) -> float:
     # Floor to nearest step
     return math.floor(raw_size / step) * step
 
-def round_down_step(value: Decimal, step: Decimal) -> Decimal: 
-    return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
+def round_down_step(value: float, step: float) -> float: # Floor division with floats 
+    return (value // step) * step
 
 def log_info(msg): 
     print(f"Time: {now_london_str()} London | {msg}")
