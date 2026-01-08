@@ -1003,8 +1003,6 @@ def log_entry(symbol, side, entry, stop, tps, risk_pct, risk_usdt, size_btc, sig
 STEP_SIZE = 0.0001 
 MIN_NOTIONAL = 5.0
 
-def round_down_step(value: Decimal, step: Decimal) -> Decimal:
-    return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
 
 def calc_position_size(balance_usdt: float, risk_pct: float, entry: float, stop: float) -> float:
     risk_amount = balance_usdt * risk_pct
