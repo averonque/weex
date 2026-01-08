@@ -895,7 +895,7 @@ def default_tps(side: str, entry: float):
 def placeOrder(symbol, decision, session_name, force_short=False):
     print(decision)
     side = decision["decision"]
-    decision["amount"] = 10
+    #decision["amount"] = 10
     amount_usdt = float(decision["amount"])
     balance = get_usdt_balance()
   #  print(str(balance)+","+str(amount_usdt))
